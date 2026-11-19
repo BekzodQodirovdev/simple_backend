@@ -28,7 +28,7 @@ Success criteria:
 | Account model | Single `network` field per user (existing `NetWorkEnum`), one provider per account | Matches existing code's behavior; avoids a new provider-linking table. |
 | Cross-provider conflict | If the resolved email already exists under a different `network`, reject with the existing "You are logged in from another network." error | Reuses existing logic in `AuthService.login`; no new conflict-resolution logic needed. |
 | Telegram identity | No real email from Telegram Login Widget, so synthesize `telegram_<id>@telegram.local` as the account's email | Avoids schema changes (no nullable email column, no new `telegram_id` column); keeps `User` entity untouched. |
-| Token delivery (Google/GitHub/Facebook) | Backend redirects the browser to `${FRONTEND_URL}/auth/callback?accessToken=...` after setting the `refreshToken` httpOnly cookie | These three require a full-page browser redirect to the provider's consent screen, so the callback is a GET redirect, not a fetch — the access token must travel back to the frontend via the redirect URL. |
+| Token delivery (Google/GitHub/Facebook) | Backend redirects the browser to `${FRONTEND_URL}/callback?accessToken=...` after setting the `refreshToken` httpOnly cookie | These three require a full-page browser redirect to the provider's consent screen, so the callback is a GET redirect, not a fetch — the access token must travel back to the frontend via the redirect URL. |
 | Token delivery (Telegram) | Direct JSON response `{ accessToken, refreshToken, data }`, same shape as `POST /auth/login` | Telegram Login Widget flow is already a frontend `fetch`/`POST`, no redirect involved. |
 | New user activation | Social logins set `is_active: true` immediately (no OTP step) | The provider has already verified the identity (or, for Telegram, the login widget itself is the verification); OTP is redundant. |
 
@@ -43,8 +43,8 @@ Success criteria:
    a. Exchanges `code` for an access token (provider's token endpoint).
    b. Fetches the user's profile (email, name, picture) with that token.
    c. Calls the shared `AuthService.loginOrRegisterSocial({ email, name, network })`.
-   d. On success: sets `refreshToken` cookie (same helper `writeToCookie` already used by `login`), redirects to `${FRONTEND_URL}/auth/callback?accessToken=...`.
-   e. On conflict: redirects to `${FRONTEND_URL}/auth/callback?error=network_conflict`.
+   d. On success: sets `refreshToken` cookie (same helper `writeToCookie` already used by `login`), redirects to `${FRONTEND_URL}/callback?accessToken=...`.
+   e. On conflict: redirects to `${FRONTEND_URL}/callback?error=network_conflict`.
 
 ### 3.2 Flow — Telegram (Login Widget)
 
@@ -103,7 +103,7 @@ TELEGRAM_BOT_TOKEN
 
 | Case | Behavior |
 |---|---|
-| Email already registered under a different network | Redirect flow: `${FRONTEND_URL}/auth/callback?error=network_conflict`. Telegram flow: throws the same `ForbiddenException` as today's `login()`, returned as JSON error. |
+| Email already registered under a different network | Redirect flow: `${FRONTEND_URL}/callback?error=network_conflict`. Telegram flow: throws the same `ForbiddenException` as today's `login()`, returned as JSON error. |
 | Provider code→token exchange fails | `400 Bad Request` ("Failed to authenticate with <provider>") |
 | Telegram hash invalid or `auth_date` too old (>1 day) | `401 Unauthorized` |
 | Provider profile fetch fails (no email returned, etc.) | `400 Bad Request` |
