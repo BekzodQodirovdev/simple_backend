@@ -51,6 +51,37 @@ describe('TelegramAuthService', () => {
     ).toThrow(UnauthorizedException);
   });
 
+  it('accepts data where NestJS has materialized omitted optional fields as literal undefined (as plainToInstance/ValidationPipe does for class-declared fields)', () => {
+    const payload = {
+      id: 123456,
+      first_name: 'Ali',
+      auth_date: Math.floor(Date.now() / 1000),
+    };
+    // Telegram only ever signs the fields it actually sent -- it never
+    // includes last_name/username/photo_url in the signature when the
+    // user has none of them set.
+    const hash = signTelegramData(payload);
+
+    // But a TelegramLoginDto instance (what the controller actually
+    // receives through the global ValidationPipe) has own `undefined`
+    // keys for every declared-but-absent optional field, because class
+    // field declarations always install an own property at construction.
+    const dtoShaped = {
+      ...payload,
+      last_name: undefined,
+      username: undefined,
+      photo_url: undefined,
+      hash,
+    };
+
+    const profile = service.verifyWidgetData(dtoShaped);
+
+    expect(profile).toEqual({
+      email: 'telegram_123456@telegram.local',
+      name: 'Ali',
+    });
+  });
+
   it('rejects widget data older than one day', () => {
     const payload = {
       id: 123456,

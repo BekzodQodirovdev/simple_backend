@@ -9,9 +9,15 @@ const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 export class TelegramAuthService {
   verifyWidgetData(data: TelegramLoginDto): { email: string; name: string } {
     const { hash, ...rest } = data;
-    const checkString = Object.keys(rest)
+    const restRecord = rest as Record<string, unknown>;
+    // Telegram only signs the fields it actually sent. A TelegramLoginDto
+    // instance has an own `undefined` key for every declared-but-absent
+    // optional field (NestJS's ValidationPipe materializes it that way),
+    // so those must be excluded or the hash can never match.
+    const checkString = Object.keys(restRecord)
+      .filter((key) => restRecord[key] !== undefined)
       .sort()
-      .map((key) => `${key}=${(rest as Record<string, unknown>)[key]}`)
+      .map((key) => `${key}=${restRecord[key]}`)
       .join('\n');
 
     const secretKey = createHash('sha256')
