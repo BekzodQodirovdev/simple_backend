@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, Profile } from 'passport-facebook';
 import { config } from 'src/config';
@@ -16,11 +16,9 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
   }
 
   validate(accessToken: string, refreshToken: string, profile: Profile) {
-    const email = profile.emails?.find((item) => item.value)?.value;
-
-    if (!email) {
-      throw new UnauthorizedException('Facebook account has no email');
-    }
+    const email =
+      profile.emails?.find((item) => item.value)?.value ||
+      `facebook_${profile.id}@facebook.local`;
 
     return {
       email,
