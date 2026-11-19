@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
 import { MailerModule, MailerOptions } from '@nestjs-modules/mailer';
 import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -26,7 +27,6 @@ import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
       database: config.DB_NAME,
       autoLoadEntities: true,
       synchronize: true,
-      // dropSchema: true,
       entities: ['dist/core/entity/*.entity{.ts,.js}'],
     }),
     MailerModule.forRoot({
@@ -38,18 +38,14 @@ import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
           pass: process.env.SMTP_PASSWORD,
         },
       },
-      // `from` is a valid nodemailer send-default; the type-only mismatch
-      // here is version skew between @nestjs-modules/mailer's declared
-      // nodemailer dependency and another transitively-resolved
-      // nodemailer version -- pre-existing, unrelated to this branch,
-      // only surfaced now that pnpm's strict resolution replaced npm's
-      // hoisting (see ledger).
+
       defaults: {
         from: process.env.SMTP_USER,
       } as MailerOptions['defaults'],
     }),
     AuthModule,
     EmailModule,
+    TelegramModule,
   ],
   controllers: [],
   providers: [

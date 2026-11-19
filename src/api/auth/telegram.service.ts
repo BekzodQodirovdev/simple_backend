@@ -7,13 +7,11 @@ const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 
 @Injectable()
 export class TelegramAuthService {
-  verifyWidgetData(data: TelegramLoginDto): { email: string; name: string } {
+  verifyWidgetData(
+    data: TelegramLoginDto,
+  ): { email: string; name: string; providerId: string } {
     const { hash, ...rest } = data;
     const restRecord = rest as Record<string, unknown>;
-    // Telegram only signs the fields it actually sent. A TelegramLoginDto
-    // instance has an own `undefined` key for every declared-but-absent
-    // optional field (NestJS's ValidationPipe materializes it that way),
-    // so those must be excluded or the hash can never match.
     const checkString = Object.keys(restRecord)
       .filter((key) => restRecord[key] !== undefined)
       .sort()
@@ -39,6 +37,7 @@ export class TelegramAuthService {
     return {
       email: `telegram_${data.id}@telegram.local`,
       name: data.first_name,
+      providerId: String(data.id),
     };
   }
 }

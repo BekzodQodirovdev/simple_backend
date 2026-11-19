@@ -8,7 +8,7 @@ export class User extends BaseModel {
   name: string;
 
   @Column({ unique: true })
-  email: string;
+  email?: string;
 
   @Column()
   password: string;
@@ -25,4 +25,7 @@ export class User extends BaseModel {
     default: NetWorkEnum.EMAIL,
   })
   network: NetWorkEnum;
+
+  @Column({ nullable: true })
+  providerId?: string;
 }

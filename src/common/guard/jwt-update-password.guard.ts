@@ -36,7 +36,6 @@ export class AuthUpdatePassword implements CanActivate {
         throw new UnauthorizedException('Unauthorized');
       }
     } catch (error) {
-      console.log(error);
       if (error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Token expired');
       }

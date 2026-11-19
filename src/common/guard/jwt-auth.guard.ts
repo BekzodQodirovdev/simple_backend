@@ -44,8 +44,7 @@ export class JwtGuard implements CanActivate {
       });
 
       req.user = user;
-    } catch (error) {
-      console.log('error', error);
+    } catch {
       throw new UnauthorizedException('Token expired');
     }
     return true;

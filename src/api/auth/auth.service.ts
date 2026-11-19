@@ -48,9 +48,6 @@ export class AuthService {
     dto.password = newPassword;
 
     const userData = this.repository.create(dto);
-    // if (userData?.network != 'email') {
-    //   userData.is_active = true;
-    // }
     const { password, ...saveData } = await this.repository.save(userData);
     const otp_code_g = OtpGenerator();
     const otp_code = this.otpRepository.create({
@@ -61,7 +58,7 @@ export class AuthService {
     });
 
     await this.otpRepository.save(otp_code);
-    this.emailService.otpSend(saveData.email, otp_code_g);
+    this.emailService.otpSend(saveData.email!, otp_code_g);
 
     return { status_code: 201, message: 'Success', data: saveData };
   }
@@ -111,10 +108,13 @@ export class AuthService {
 
   private signTokens(
     user: Pick<User, 'id' | 'email' | 'is_active'>,
-  ): { accessToken: string; refreshToken: string } {
+  ): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     const payload: IPayload = {
       sub: user.id,
-      email: user.email,
+      email: user.email ?? '',
       is_active: user.is_active,
     };
     const accessToken = this.jwtService.sign(payload, {
@@ -134,6 +134,7 @@ export class AuthService {
   async loginOrRegisterSocial(
     email: string,
     name: string,
+    providerId: string,
     network: NetWorkEnum,
     res: Response,
   ) {
@@ -150,25 +151,21 @@ export class AuthService {
           password: randomPassword,
           is_active: true,
           network,
+          providerId,
         }),
       );
     } else if (user.network !== network) {
       throw new ForbiddenException('You are logged in from another network.');
     } else {
-      // The provider has just re-verified ownership of this email, so
-      // treat that as authoritative: activate the row and rotate its
-      // password. This closes the account-pre-seeding window where
-      // someone registers this email/network via /auth/register with a
-      // password of their own choosing before the real owner ever logs
-      // in with that provider.
       const randomPassword = await this.manageBcrypt.createBcryptPassword(
         randomBytes(32).toString('hex'),
       );
       await this.repository.update(user.id, {
         is_active: true,
         password: randomPassword,
+        providerId,
       });
-      user = { ...user, is_active: true, password: randomPassword };
+      user = { ...user, is_active: true, password: randomPassword, providerId };
     }
 
     const { accessToken, refreshToken } = this.signTokens(user);
@@ -290,9 +287,6 @@ export class AuthService {
   async updatePassword(dto: UpdatePasswordDto, tokenEmail: string) {
     const { email, password } = dto;
     if (email !== tokenEmail) {
-      // The reset token only proves the caller verified an OTP for
-      // `tokenEmail`; without this check it could be replayed to reset
-      // ANY account's password just by naming a different `email` here.
       throw new ForbiddenException(
         'This reset token does not belong to that email.',
       );

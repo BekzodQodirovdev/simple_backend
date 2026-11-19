@@ -6,11 +6,9 @@ import {
   Res,
   Patch,
   UseGuards,
-  Query,
+  UseFilters,
   Req,
-  ForbiddenException,
 } from '@nestjs/common';
-import { randomBytes } from 'crypto';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { Request, Response } from 'express';
@@ -23,21 +21,24 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdatePasswordDto } from './dto/update-password';
 import { AuthUpdatePassword } from 'src/common/guard/jwt-update-password.guard';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-import { GoogleAuthService } from './google.service';
-import { GithubAuthService } from './github.service';
-import { FacebookAuthService } from './facebook.service';
-import { TelegramAuthService } from './telegram.service';
-import { TelegramLoginDto } from './dto/telegram-login.dto';
 import { NetWorkEnum } from 'src/common/enum/network.enums';
 import { config } from 'src/config';
+import { AuthGuard } from '@nestjs/passport';
+import {
+  OAUTH_STATE_COOKIE,
+  SocialAuthStartGuard,
+} from './guards/social-auth.guard';
+import { SocialAuthExceptionFilter } from './guards/social-auth-exception.filter';
+import { TelegramAuthService } from './telegram.service';
+import { TelegramLoginDto } from './dto/telegram-login.dto';
+
+type SocialProfile = { email: string; name: string; providerId: string };
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly googleAuthService: GoogleAuthService,
-    private readonly githubAuthService: GithubAuthService,
-    private readonly facebookAuthService: FacebookAuthService,
     private readonly telegramAuthService: TelegramAuthService,
   ) {}
 
@@ -69,137 +70,8 @@ export class AuthController {
   }
 
   @Public()
-  @Get('google')
-  redirectToGoogle(@Res() res: Response) {
-    const state = randomBytes(16).toString('hex');
-    res.cookie('oauth_state', state, {
-      httpOnly: true,
-      maxAge: 5 * 60 * 1000,
-    });
-    res.redirect(this.googleAuthService.getAuthUrl(state));
-  }
-
-  @Public()
-  @Get('google/callback')
-  async googleCallback(
-    @Query('code') code: string,
-    @Query('state') state: string,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    if (!state || state !== req.cookies?.oauth_state) {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
-      return;
-    }
-    res.clearCookie('oauth_state');
-    try {
-      const profile = await this.googleAuthService.handleCallback(code);
-      const result = await this.authService.loginOrRegisterSocial(
-        profile.email,
-        profile.name,
-        NetWorkEnum.GOOGLE,
-        res,
-      );
-      res.redirect(
-        `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
-      );
-    } catch (error) {
-      this.redirectOnSocialError(res, error);
-    }
-  }
-
-  @Public()
-  @Get('github')
-  redirectToGithub(@Res() res: Response) {
-    const state = randomBytes(16).toString('hex');
-    res.cookie('oauth_state', state, {
-      httpOnly: true,
-      maxAge: 5 * 60 * 1000,
-    });
-    res.redirect(this.githubAuthService.getAuthUrl(state));
-  }
-
-  @Public()
-  @Get('github/callback')
-  async githubCallback(
-    @Query('code') code: string,
-    @Query('state') state: string,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    if (!state || state !== req.cookies?.oauth_state) {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
-      return;
-    }
-    res.clearCookie('oauth_state');
-    try {
-      const profile = await this.githubAuthService.handleCallback(code);
-      const result = await this.authService.loginOrRegisterSocial(
-        profile.email,
-        profile.name,
-        NetWorkEnum.GITHUB,
-        res,
-      );
-      res.redirect(
-        `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
-      );
-    } catch (error) {
-      this.redirectOnSocialError(res, error);
-    }
-  }
-
-  @Public()
-  @Get('facebook')
-  redirectToFacebook(@Res() res: Response) {
-    const state = randomBytes(16).toString('hex');
-    res.cookie('oauth_state', state, {
-      httpOnly: true,
-      maxAge: 5 * 60 * 1000,
-    });
-    res.redirect(this.facebookAuthService.getAuthUrl(state));
-  }
-
-  @Public()
-  @Get('facebook/callback')
-  async facebookCallback(
-    @Query('code') code: string,
-    @Query('state') state: string,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    if (!state || state !== req.cookies?.oauth_state) {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
-      return;
-    }
-    res.clearCookie('oauth_state');
-    try {
-      const profile = await this.facebookAuthService.handleCallback(code);
-      const result = await this.authService.loginOrRegisterSocial(
-        profile.email,
-        profile.name,
-        NetWorkEnum.FACEBOOK,
-        res,
-      );
-      res.redirect(
-        `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
-      );
-    } catch (error) {
-      this.redirectOnSocialError(res, error);
-    }
-  }
-
-  private redirectOnSocialError(res: Response, error: unknown) {
-    if (error instanceof ForbiddenException) {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=network_conflict`);
-      return;
-    }
-    console.error('Social login callback error:', error);
-    res.redirect(`${config.FRONTEND_URL}/callback?error=server_error`);
-  }
-
-  @Public()
   @Post('telegram')
-  telegramLogin(
+  async telegramLogin(
     @Body() data: TelegramLoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -207,12 +79,77 @@ export class AuthController {
     return this.authService.loginOrRegisterSocial(
       profile.email,
       profile.name,
+      profile.providerId,
       NetWorkEnum.TELEGRAM,
       res,
     );
   }
 
-  // token must
+  @Public()
+  @Get('google')
+  @UseGuards(SocialAuthStartGuard('google'))
+  googleLogin() {}
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @UseFilters(SocialAuthExceptionFilter)
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleSocialCallback(req, res, NetWorkEnum.GOOGLE);
+  }
+
+  @Public()
+  @Get('github')
+  @UseGuards(SocialAuthStartGuard('github'))
+  githubLogin() {}
+
+  @Public()
+  @Get('github/callback')
+  @UseGuards(AuthGuard('github'))
+  @UseFilters(SocialAuthExceptionFilter)
+  async githubCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleSocialCallback(req, res, NetWorkEnum.GITHUB);
+  }
+
+  @Public()
+  @Get('facebook')
+  @UseGuards(SocialAuthStartGuard('facebook'))
+  facebookLogin() {}
+
+  @Public()
+  @Get('facebook/callback')
+  @UseGuards(AuthGuard('facebook'))
+  @UseFilters(SocialAuthExceptionFilter)
+  async facebookCallback(@Req() req: Request, @Res() res: Response) {
+    return this.handleSocialCallback(req, res, NetWorkEnum.FACEBOOK);
+  }
+
+  private async handleSocialCallback(
+    req: Request,
+    res: Response,
+    network: NetWorkEnum,
+  ) {
+    const expectedState = req.cookies?.[OAUTH_STATE_COOKIE] as
+      | string
+      | undefined;
+    res.clearCookie(OAUTH_STATE_COOKIE);
+    if (!expectedState || expectedState !== req.query.state) {
+      return res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
+    }
+
+    const user = req.user as SocialProfile;
+    const result = await this.authService.loginOrRegisterSocial(
+      user.email,
+      user.name,
+      user.providerId,
+      network,
+      res,
+    );
+    return res.redirect(
+      `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
+    );
+  }
+
   @ApiBearerAuth()
   @Get('profile')
   profile(@UserID() id: string) {

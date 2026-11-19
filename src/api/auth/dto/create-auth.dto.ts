@@ -11,14 +11,14 @@ import { NetWorkEnum } from 'src/common/enum/network.enums';
 export class CreateAuthDto {
   @ApiProperty({ example: 'Ali Valiyev', description: 'Foydalanuvchi ismi' })
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     example: 'ali@example.com',
     description: 'Foydalanuvchi email manzili',
   })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     example: 'securePassword123',
@@ -27,7 +27,7 @@ export class CreateAuthDto {
   })
   @IsString()
   @MinLength(6)
-  password: string;
+  password!: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com/avatar.jpg',
@@ -44,4 +44,13 @@ export class CreateAuthDto {
   @IsOptional()
   @IsEnum(NetWorkEnum)
   network?: NetWorkEnum;
+
+  @IsOptional()
+  @ApiPropertyOptional({
+    example: '1234567890',
+    description:
+      'Ijtimoiy tarmoq orqali ro‘yxatdan o‘tgan bo‘lsa, foydalanuvchi identifikatori (ixtiyoriy)',
+  })
+  @IsString()
+  providerId?: string;
 }
