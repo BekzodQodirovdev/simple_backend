@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ForbiddenException,
   HttpException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,14 +16,13 @@ import { Otp } from 'src/core/entity/otp.entity';
 import { EmailService } from '../email/email.service';
 import { IPayload } from 'src/common/interfaces';
 import { config } from 'src/config';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { VerifyDto } from './dto/verify.dto';
 import { OtpGenerator } from 'src/infrastructure/lib/otp';
 import { setdOtpDdto } from './dto/sendotp.dto';
 import { UpdatePasswordDto } from './dto/update-password';
 import { VerifyType } from 'src/common/type/otp.type';
-import Redis from 'ioredis';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { NetWorkEnum } from 'src/common/enum/network.enums';
 import { randomBytes } from 'crypto';
@@ -34,7 +32,6 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private readonly repository: UserRepository,
     @InjectRepository(Otp) private readonly otpRepository: OtpRepository,
-    @Inject('REDIS_CLIENT') private readonly redis: Redis,
     private readonly manageBcrypt: BcryptManage,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
@@ -275,12 +272,7 @@ export class AuthService {
     });
   }
 
-  async updatePassword(dto: UpdatePasswordDto, req: Request) {
-    const getToken = req.headers.authorization?.split(' ')[1];
-    const token1 = await this.redis.get(`otp:token_${getToken}`);
-    if (token1) {
-      throw new BadRequestException('Parol allaqachon yangilangan');
-    }
+  async updatePassword(dto: UpdatePasswordDto) {
     const { email, password } = dto;
     const user = await this.repository.findOne({ where: { email } });
     if (!user) {
@@ -291,7 +283,6 @@ export class AuthService {
       password: newPassword,
       updated_at: new Date(Date.now()),
     });
-    await this.redis.set(`otp:token_${getToken}`, getToken as string);
     return {
       status_code: 200,
       message: 'Success',

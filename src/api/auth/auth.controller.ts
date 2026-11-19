@@ -6,12 +6,11 @@ import {
   Res,
   Patch,
   UseGuards,
-  Req,
   Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-auth.dto';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { VerifyDto } from './dto/verify.dto';
 import { setdOtpDdto } from './dto/sendotp.dto';
 import { UserID } from 'src/common/decorator/user-id.decorator';
@@ -167,8 +166,8 @@ export class AuthController {
   @Public()
   @UseGuards(AuthUpdatePassword)
   @Patch('forgot-password')
-  updatePassword(@Body() data: UpdatePasswordDto, @Req() res: Request) {
-    return this.authService.updatePassword(data, res);
+  updatePassword(@Body() data: UpdatePasswordDto) {
+    return this.authService.updatePassword(data);
   }
 
   @ApiBearerAuth()

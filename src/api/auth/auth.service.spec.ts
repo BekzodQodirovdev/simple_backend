@@ -37,10 +37,6 @@ describe('AuthService', () => {
         { provide: getRepositoryToken(User), useValue: userRepository },
         { provide: getRepositoryToken(Otp), useValue: {} },
         {
-          provide: 'REDIS_CLIENT',
-          useValue: { get: jest.fn(), set: jest.fn() },
-        },
-        {
           provide: BcryptManage,
           useValue: {
             createBcryptPassword: jest.fn().mockResolvedValue('hashed'),

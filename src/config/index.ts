@@ -13,8 +13,6 @@ export type ConfigType = {
   REFRESH_TOKEN_KEY: string;
   REFRESH_TOKEN_TIME: string;
   JWT_SECRET: string;
-  REDIS_HOST: string;
-  REDIS_PORT: string;
   SMTP_HOST: string;
   SMTP_PORT: string;
   SMTP_USER: string;
@@ -45,8 +43,6 @@ export const config: ConfigType = {
   REFRESH_TOKEN_KEY: process.env.REFRESH_TOKEN_KEY as string,
   REFRESH_TOKEN_TIME: process.env.REFRESH_TOKEN_TIME as string,
   JWT_SECRET: process.env.JWT_SECRET as string,
-  REDIS_HOST: process.env.REDIS_HOST as string,
-  REDIS_PORT: process.env.REDIS_PORT as string,
   SMTP_HOST: process.env.SMTP_HOST as string,
   SMTP_PORT: process.env.SMTP_PORT as string,
   SMTP_USER: process.env.SMTP_USER as string,
