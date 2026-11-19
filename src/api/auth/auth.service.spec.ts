@@ -9,6 +9,7 @@ import { EmailService } from '../email/email.service';
 import { NetWorkEnum } from 'src/common/enum/network.enums';
 import type { Response } from 'express';
 import type { LoginUserDto } from './dto/login-auth.dto';
+import type { UpdatePasswordDto } from './dto/update-password';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -131,6 +132,28 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('signed-token');
     });
 
+    it('reclaims an existing matching-network row by activating it and rotating its password, so a pre-seeded credential cannot be used to log in later', async () => {
+      userRepository.findOne.mockResolvedValue({
+        id: 'u1',
+        email: 'existing@test.com',
+        password: 'attacker-chosen-hash',
+        is_active: false,
+        network: NetWorkEnum.GOOGLE,
+      });
+
+      await service.loginOrRegisterSocial(
+        'existing@test.com',
+        'Existing User',
+        NetWorkEnum.GOOGLE,
+        mockResponse(),
+      );
+
+      expect(userRepository.update).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ is_active: true, password: 'hashed' }),
+      );
+    });
+
     it('rejects when the email is already registered under a different network', async () => {
       userRepository.findOne.mockResolvedValue({
         id: 'u1',
@@ -148,6 +171,34 @@ describe('AuthService', () => {
           mockResponse(),
         ),
       ).rejects.toThrow('You are logged in from another network.');
+    });
+  });
+
+  describe('updatePassword', () => {
+    it('rejects when the dto email does not match the email the reset token was issued for', async () => {
+      await expect(
+        service.updatePassword(
+          { email: 'victim@test.com', password: 'new-pass' } as UpdatePasswordDto,
+          'attacker@test.com',
+        ),
+      ).rejects.toThrow('This reset token does not belong to that email.');
+
+      expect(userRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('updates the password when the dto email matches the email the reset token was issued for', async () => {
+      userRepository.findOne.mockResolvedValue({ id: 'u1', email: 'a@test.com' });
+
+      const result = await service.updatePassword(
+        { email: 'a@test.com', password: 'new-pass' } as UpdatePasswordDto,
+        'a@test.com',
+      );
+
+      expect(userRepository.update).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ password: 'hashed' }),
+      );
+      expect(result.message).toBe('Success');
     });
   });
 });

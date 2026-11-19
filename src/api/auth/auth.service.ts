@@ -154,6 +154,21 @@ export class AuthService {
       );
     } else if (user.network !== network) {
       throw new ForbiddenException('You are logged in from another network.');
+    } else {
+      // The provider has just re-verified ownership of this email, so
+      // treat that as authoritative: activate the row and rotate its
+      // password. This closes the account-pre-seeding window where
+      // someone registers this email/network via /auth/register with a
+      // password of their own choosing before the real owner ever logs
+      // in with that provider.
+      const randomPassword = await this.manageBcrypt.createBcryptPassword(
+        randomBytes(32).toString('hex'),
+      );
+      await this.repository.update(user.id, {
+        is_active: true,
+        password: randomPassword,
+      });
+      user = { ...user, is_active: true, password: randomPassword };
     }
 
     const { accessToken, refreshToken } = this.signTokens(user);
@@ -272,8 +287,16 @@ export class AuthService {
     });
   }
 
-  async updatePassword(dto: UpdatePasswordDto) {
+  async updatePassword(dto: UpdatePasswordDto, tokenEmail: string) {
     const { email, password } = dto;
+    if (email !== tokenEmail) {
+      // The reset token only proves the caller verified an OTP for
+      // `tokenEmail`; without this check it could be replayed to reset
+      // ANY account's password just by naming a different `email` here.
+      throw new ForbiddenException(
+        'This reset token does not belong to that email.',
+      );
+    }
     const user = await this.repository.findOne({ where: { email } });
     if (!user) {
       throw new NotFoundException('User not found');
