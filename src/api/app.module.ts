@@ -7,11 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { RedisModule } from 'src/common/redis/redis.module';
-import { IncomeModule } from './income/income.module';
 import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
-import { EventModule } from './event/event.module';
-import { ExpenseModule } from './expense/expense.module';
-import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -50,10 +46,6 @@ import { TasksModule } from './tasks/tasks.module';
     AuthModule,
     EmailModule,
     RedisModule,
-    IncomeModule,
-    EventModule,
-    ExpenseModule,
-    TasksModule,
   ],
   controllers: [],
   providers: [
