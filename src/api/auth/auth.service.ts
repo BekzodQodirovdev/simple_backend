@@ -26,6 +26,8 @@ import { UpdatePasswordDto } from './dto/update-password';
 import { VerifyType } from 'src/common/type/otp.type';
 import Redis from 'ioredis';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { NetWorkEnum } from 'src/common/enum/network.enums';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -89,19 +91,7 @@ export class AuthService {
     if (currentData.network != network) {
       throw new ForbiddenException(`You are logged in from another network.`);
     }
-    const payload: IPayload = {
-      sub: currentData.id,
-      email: currentData.email,
-      is_active: currentData.is_active,
-    };
-    const accessToken = this.jwtService.sign(payload, {
-      secret: config.ACCESS_TOKEN_KEY,
-      expiresIn: config.ACCESS_TOKEN_TIME,
-    });
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: config.REFRESH_TOKEN_KEY,
-      expiresIn: config.REFRESH_TOKEN_TIME,
-    });
+    const { accessToken, refreshToken } = this.signTokens(currentData);
     const { password, ...data } = currentData;
     this.writeToCookie(refreshToken, res);
     return {
@@ -120,6 +110,59 @@ export class AuthService {
     } catch (error) {
       throw new BadRequestException(`Error on write to cookie: ${error}`);
     }
+  }
+
+  private signTokens(
+    user: Pick<User, 'id' | 'email' | 'is_active'>,
+  ): { accessToken: string; refreshToken: string } {
+    const payload: IPayload = {
+      sub: user.id,
+      email: user.email,
+      is_active: user.is_active,
+    };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: config.ACCESS_TOKEN_KEY,
+      // `expiresIn` is typed as `ms.StringValue | number` since
+      // @types/jsonwebtoken v9; our config value is a plain string at
+      // runtime (e.g. "1d"), so it needs this cast.
+      expiresIn: config.ACCESS_TOKEN_TIME as any,
+    });
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: config.REFRESH_TOKEN_KEY,
+      expiresIn: config.REFRESH_TOKEN_TIME as any,
+    });
+    return { accessToken, refreshToken };
+  }
+
+  async loginOrRegisterSocial(
+    email: string,
+    name: string,
+    network: NetWorkEnum,
+    res: Response,
+  ) {
+    let user = await this.repository.findOne({ where: { email } });
+
+    if (!user) {
+      const randomPassword = await this.manageBcrypt.createBcryptPassword(
+        randomBytes(32).toString('hex'),
+      );
+      user = await this.repository.save(
+        this.repository.create({
+          name,
+          email,
+          password: randomPassword,
+          is_active: true,
+          network,
+        }),
+      );
+    } else if (user.network !== network) {
+      throw new ForbiddenException('You are logged in from another network.');
+    }
+
+    const { accessToken, refreshToken } = this.signTokens(user);
+    const { password, ...data } = user;
+    this.writeToCookie(refreshToken, res);
+    return { accessToken, refreshToken, data };
   }
 
   async verify(data: VerifyDto) {
