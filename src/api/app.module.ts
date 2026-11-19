@@ -5,7 +5,7 @@ import { config } from 'src/config';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
-import { MailerModule } from '@nestjs-modules/mailer';
+import { MailerModule, MailerOptions } from '@nestjs-modules/mailer';
 import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
 
 @Module({
@@ -38,9 +38,15 @@ import { JwtGuard } from 'src/common/guard/jwt-auth.guard';
           pass: process.env.SMTP_PASSWORD,
         },
       },
+      // `from` is a valid nodemailer send-default; the type-only mismatch
+      // here is version skew between @nestjs-modules/mailer's declared
+      // nodemailer dependency and another transitively-resolved
+      // nodemailer version -- pre-existing, unrelated to this branch,
+      // only surfaced now that pnpm's strict resolution replaced npm's
+      // hoisting (see ledger).
       defaults: {
         from: process.env.SMTP_USER,
-      },
+      } as MailerOptions['defaults'],
     }),
     AuthModule,
     EmailModule,
