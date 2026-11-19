@@ -15,6 +15,19 @@ export type ConfigType = {
   JWT_SECRET: string;
   REDIS_HOST: string;
   REDIS_PORT: string;
+  SMTP_HOST: string;
+  SMTP_PORT: string;
+  SMTP_USER: string;
+  SMTP_PASSWORD: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_APP_SECRET: string;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_APP_SECRET: string;
+  FACEBOOK_CLIENT_ID: string;
+  FACEBOOK_APP_SECRET: string;
+  FRONTEND_URL: string;
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_BOT_USERNAME: string;
 };
 
 export const config: ConfigType = {
@@ -31,4 +44,17 @@ export const config: ConfigType = {
   JWT_SECRET: process.env.JWT_SECRET as string,
   REDIS_HOST: process.env.REDIS_HOST as string,
   REDIS_PORT: process.env.REDIS_PORT as string,
+  SMTP_HOST: process.env.SMTP_HOST as string,
+  SMTP_PORT: process.env.SMTP_PORT as string,
+  SMTP_USER: process.env.SMTP_USER as string,
+  SMTP_PASSWORD: process.env.SMTP_PASSWORD as string,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
+  GOOGLE_APP_SECRET: process.env.GOOGLE_APP_SECRET as string,
+  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID as string,
+  GITHUB_APP_SECRET: process.env.GITHUB_APP_SECRET as string,
+  FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID as string,
+  FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET as string,
+  FRONTEND_URL: process.env.FRONTEND_URL as string,
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN as string,
+  TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME as string,
 };
