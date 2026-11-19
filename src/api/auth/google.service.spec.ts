@@ -11,11 +11,12 @@ describe('GoogleAuthService', () => {
   });
 
   describe('getAuthUrl', () => {
-    it('builds a Google OAuth consent URL containing the client id and redirect uri', () => {
-      const url = service.getAuthUrl();
+    it('builds a Google OAuth consent URL containing the client id, redirect uri, and CSRF state', () => {
+      const url = service.getAuthUrl('csrf-state-123');
       expect(url).toContain('https://accounts.google.com/o/oauth2/v2/auth?');
       expect(url).toContain('client_id=');
       expect(url).toContain('redirect_uri=');
+      expect(url).toContain('state=csrf-state-123');
     });
   });
 

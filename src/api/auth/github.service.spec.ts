@@ -11,10 +11,11 @@ describe('GithubAuthService', () => {
   });
 
   describe('getAuthUrl', () => {
-    it('builds a GitHub OAuth authorize URL with the email scope', () => {
-      const url = service.getAuthUrl();
+    it('builds a GitHub OAuth authorize URL with the email scope and CSRF state', () => {
+      const url = service.getAuthUrl('csrf-state-123');
       expect(url).toContain('https://github.com/login/oauth/authorize?');
       expect(url).toContain('user%3Aemail');
+      expect(url).toContain('state=csrf-state-123');
     });
   });
 

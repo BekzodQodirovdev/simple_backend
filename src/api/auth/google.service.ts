@@ -3,12 +3,13 @@ import { config } from 'src/config';
 
 @Injectable()
 export class GoogleAuthService {
-  getAuthUrl(): string {
+  getAuthUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: config.GOOGLE_CLIENT_ID,
       redirect_uri: config.GOOGLE_CALLBACK_URL,
       response_type: 'code',
       scope: 'email profile',
+      state,
     });
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }

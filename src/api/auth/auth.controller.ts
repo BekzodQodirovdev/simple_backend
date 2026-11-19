@@ -7,10 +7,13 @@ import {
   Patch,
   UseGuards,
   Query,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-auth.dto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { VerifyDto } from './dto/verify.dto';
 import { setdOtpDdto } from './dto/sendotp.dto';
 import { UserID } from 'src/common/decorator/user-id.decorator';
@@ -68,14 +71,29 @@ export class AuthController {
   @Public()
   @Get('google')
   redirectToGoogle(@Res() res: Response) {
-    res.redirect(this.googleAuthService.getAuthUrl());
+    const state = randomBytes(16).toString('hex');
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      maxAge: 5 * 60 * 1000,
+    });
+    res.redirect(this.googleAuthService.getAuthUrl(state));
   }
 
   @Public()
   @Get('google/callback')
-  async googleCallback(@Query('code') code: string, @Res() res: Response) {
-    const profile = await this.googleAuthService.handleCallback(code);
+  async googleCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    if (!state || state !== req.cookies?.oauth_state) {
+      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
+      return;
+    }
+    res.clearCookie('oauth_state');
     try {
+      const profile = await this.googleAuthService.handleCallback(code);
       const result = await this.authService.loginOrRegisterSocial(
         profile.email,
         profile.name,
@@ -85,22 +103,37 @@ export class AuthController {
       res.redirect(
         `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
       );
-    } catch {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=network_conflict`);
+    } catch (error) {
+      this.redirectOnSocialError(res, error);
     }
   }
 
   @Public()
   @Get('github')
   redirectToGithub(@Res() res: Response) {
-    res.redirect(this.githubAuthService.getAuthUrl());
+    const state = randomBytes(16).toString('hex');
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      maxAge: 5 * 60 * 1000,
+    });
+    res.redirect(this.githubAuthService.getAuthUrl(state));
   }
 
   @Public()
   @Get('github/callback')
-  async githubCallback(@Query('code') code: string, @Res() res: Response) {
-    const profile = await this.githubAuthService.handleCallback(code);
+  async githubCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    if (!state || state !== req.cookies?.oauth_state) {
+      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
+      return;
+    }
+    res.clearCookie('oauth_state');
     try {
+      const profile = await this.githubAuthService.handleCallback(code);
       const result = await this.authService.loginOrRegisterSocial(
         profile.email,
         profile.name,
@@ -110,22 +143,37 @@ export class AuthController {
       res.redirect(
         `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
       );
-    } catch {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=network_conflict`);
+    } catch (error) {
+      this.redirectOnSocialError(res, error);
     }
   }
 
   @Public()
   @Get('facebook')
   redirectToFacebook(@Res() res: Response) {
-    res.redirect(this.facebookAuthService.getAuthUrl());
+    const state = randomBytes(16).toString('hex');
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      maxAge: 5 * 60 * 1000,
+    });
+    res.redirect(this.facebookAuthService.getAuthUrl(state));
   }
 
   @Public()
   @Get('facebook/callback')
-  async facebookCallback(@Query('code') code: string, @Res() res: Response) {
-    const profile = await this.facebookAuthService.handleCallback(code);
+  async facebookCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    if (!state || state !== req.cookies?.oauth_state) {
+      res.redirect(`${config.FRONTEND_URL}/callback?error=invalid_state`);
+      return;
+    }
+    res.clearCookie('oauth_state');
     try {
+      const profile = await this.facebookAuthService.handleCallback(code);
       const result = await this.authService.loginOrRegisterSocial(
         profile.email,
         profile.name,
@@ -135,9 +183,18 @@ export class AuthController {
       res.redirect(
         `${config.FRONTEND_URL}/callback?accessToken=${result.accessToken}`,
       );
-    } catch {
-      res.redirect(`${config.FRONTEND_URL}/callback?error=network_conflict`);
+    } catch (error) {
+      this.redirectOnSocialError(res, error);
     }
+  }
+
+  private redirectOnSocialError(res: Response, error: unknown) {
+    if (error instanceof ForbiddenException) {
+      res.redirect(`${config.FRONTEND_URL}/callback?error=network_conflict`);
+      return;
+    }
+    console.error('Social login callback error:', error);
+    res.redirect(`${config.FRONTEND_URL}/callback?error=server_error`);
   }
 
   @Public()
@@ -166,8 +223,10 @@ export class AuthController {
   @Public()
   @UseGuards(AuthUpdatePassword)
   @Patch('forgot-password')
-  updatePassword(@Body() data: UpdatePasswordDto) {
-    return this.authService.updatePassword(data);
+  updatePassword(@Body() data: UpdatePasswordDto, @Req() req: Request) {
+    const tokenEmail = (req as unknown as { user: { email: string } }).user
+      .email;
+    return this.authService.updatePassword(data, tokenEmail);
   }
 
   @ApiBearerAuth()

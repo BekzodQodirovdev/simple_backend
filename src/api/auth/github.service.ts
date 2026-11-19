@@ -5,11 +5,12 @@ type GithubEmail = { email: string; primary: boolean; verified: boolean };
 
 @Injectable()
 export class GithubAuthService {
-  getAuthUrl(): string {
+  getAuthUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: config.GITHUB_CLIENT_ID,
       redirect_uri: config.GITHUB_CALLBACK_URL,
       scope: 'read:user user:email',
+      state,
     });
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }

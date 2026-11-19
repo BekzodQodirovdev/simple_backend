@@ -11,10 +11,11 @@ describe('FacebookAuthService', () => {
   });
 
   describe('getAuthUrl', () => {
-    it('builds a Facebook OAuth dialog URL with the email scope', () => {
-      const url = service.getAuthUrl();
+    it('builds a Facebook OAuth dialog URL with the email scope and CSRF state', () => {
+      const url = service.getAuthUrl('csrf-state-123');
       expect(url).toContain('https://www.facebook.com/v19.0/dialog/oauth?');
       expect(url).toContain('scope=email');
+      expect(url).toContain('state=csrf-state-123');
     });
   });
 

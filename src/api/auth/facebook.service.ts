@@ -3,11 +3,12 @@ import { config } from 'src/config';
 
 @Injectable()
 export class FacebookAuthService {
-  getAuthUrl(): string {
+  getAuthUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: config.FACEBOOK_CLIENT_ID,
       redirect_uri: config.FACEBOOK_CALLBACK_URL,
       scope: 'email,public_profile',
+      state,
     });
     return `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`;
   }
