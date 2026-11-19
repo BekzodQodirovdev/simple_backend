@@ -7,6 +7,10 @@ import { User } from 'src/core/entity/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailModule } from '../email/email.module';
 import { Otp } from 'src/core/entity/otp.entity';
+import { GoogleAuthService } from './google.service';
+import { GithubAuthService } from './github.service';
+import { FacebookAuthService } from './facebook.service';
+import { TelegramAuthService } from './telegram.service';
 
 @Module({
   imports: [
@@ -15,6 +19,13 @@ import { Otp } from 'src/core/entity/otp.entity';
     EmailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, BcryptManage],
+  providers: [
+    AuthService,
+    BcryptManage,
+    GoogleAuthService,
+    GithubAuthService,
+    FacebookAuthService,
+    TelegramAuthService,
+  ],
 })
 export class AuthModule {}
