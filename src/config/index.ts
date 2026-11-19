@@ -28,6 +28,9 @@ export type ConfigType = {
   FRONTEND_URL: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_BOT_USERNAME: string;
+  GOOGLE_CALLBACK_URL: string;
+  GITHUB_CALLBACK_URL: string;
+  FACEBOOK_CALLBACK_URL: string;
 };
 
 export const config: ConfigType = {
@@ -57,4 +60,7 @@ export const config: ConfigType = {
   FRONTEND_URL: process.env.FRONTEND_URL as string,
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN as string,
   TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME as string,
+  GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL as string,
+  GITHUB_CALLBACK_URL: process.env.GITHUB_CALLBACK_URL as string,
+  FACEBOOK_CALLBACK_URL: process.env.FACEBOOK_CALLBACK_URL as string,
 };
