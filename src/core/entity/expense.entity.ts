@@ -1,0 +1,30 @@
+import { BaseModel } from 'src/common/database';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { User } from './user.entity';
+import { Category } from './category.entity';
+
+@Entity()
+export class Expense extends BaseModel {
+  @Column()
+  title: string;
+
+  @Column({ type: 'text' })
+  description: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  price: number;
+
+  @Column({ type: 'uuid' })
+  user_id: string;
+
+  @Column({ type: 'uuid' })
+  category_id: string;
+
+  @ManyToOne(() => Category)
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
+
+  @ManyToOne(() => User, (user) => user.expense)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+}
